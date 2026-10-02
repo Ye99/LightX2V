@@ -5,7 +5,7 @@ from collections import OrderedDict
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 from loguru import logger
 
@@ -64,6 +64,8 @@ class TaskManager:
         self._task_available = threading.Condition(self._lock)
 
         self._processing_lock = threading.Lock()
+        # Called when the task currently on the GPU is cancelled, to abort its denoising loop.
+        self.on_cancel_processing: Optional[Callable[[], None]] = None
         self._current_processing_task: Optional[str] = None
 
         self.total_tasks = 0
@@ -159,6 +161,8 @@ class TaskManager:
                 return False
 
             task.stop_event.set()
+            if task.status == TaskStatus.PROCESSING and self.on_cancel_processing:
+                self.on_cancel_processing()
             task.status = TaskStatus.CANCELLED
             task.end_time = datetime.now()
             task.error = "Task cancelled by user"

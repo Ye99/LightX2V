@@ -2,6 +2,7 @@ from typing import Optional
 
 from loguru import logger
 
+from ...task_manager import task_manager
 from .worker import TorchrunInferenceWorker
 
 
@@ -22,6 +23,9 @@ class DistributedInferenceService:
 
             if not self.worker.init(args):
                 raise RuntimeError("Worker initialization failed")
+
+            if self.worker.rank == 0:
+                task_manager.on_cancel_processing = self.worker.stop_current
 
             self.is_running = True
             logger.info(f"Rank {self.worker.rank} inference service started successfully")

@@ -77,6 +77,7 @@ class TorchrunInferenceWorker:
         pipeline_return = None
         return_pipeline_result = False
         task_id = task_data.get("task_id", "unknown")
+        self.runner.stop_signal = False
 
         try:
             if self.world_size > 1 and self.rank == 0:
@@ -210,6 +211,10 @@ class TorchrunInferenceWorker:
                         logger.warning(f"Rank {self.rank} barrier failed, exiting: {barrier_error}")
                         break
                 continue
+
+    def stop_current(self):
+        # runner.check_stop() broadcasts this from rank 0 each step, so every rank aborts together.
+        self.runner.stop_signal = True
 
     def cleanup(self):
         self.dist_manager.cleanup()
